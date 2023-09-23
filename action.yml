@@ -44,7 +44,7 @@ runs:
           echo "Fetching data from primary URL..."
         else
           echo "Primary URL request failed. Falling back to secondary URL..."
-        if curl --output "${{ steps.vars.outputs.second_path }}" "${{ steps.vars.outputs.secondary_url }}.sig" --location --silent --show-error --fail --retry 5
+          curl --output "${{ steps.vars.outputs.second_path }}" "${{ steps.vars.outputs.secondary_url }}.sig" --location --silent --show-error --fail --retry 5
         fi
       shell: bash
 
