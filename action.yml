@@ -15,18 +15,47 @@ runs:
       run: echo "dir=$(dirname $(which cargo))" >> $GITHUB_OUTPUT
       shell: bash
       id: cargo
-    - name: Download ${{inputs.bin || inputs.crate}}
-      run: curl --output ${{steps.cargo.outputs.dir}}/${{inputs.bin || inputs.crate}} https://github.com/kaankoken/install/releases/download/${{inputs.crate}}/${{inputs.bin || inputs.crate}} --location --silent --show-error --fail --retry 5
+
+    - name: Set local variables
+      id: vars
       shell: bash
-    - name: Download ${{inputs.bin || inputs.crate}}.sig
-      run: curl --output ${{runner.temp}}/${{inputs.bin || inputs.crate}}.sig https://github.com/kaankoken/install/releases/download/${{inputs.crate}}/${{inputs.bin || inputs.crate}}.sig --location --silent --show-error --fail --retry 5
+      run: |
+        echo "primary_url=https://github.com/kaankoken/install/releases/download/${{ inputs.crate }}/${{ inputs.bin || inputs.crate }}" >> $GITHUB_OUTPUT
+        echo "secondary_url=https://github.com/dtolnay/install/releases/download/${{ inputs.crate }}/${{ inputs.bin || inputs.crate }}" >> $GITHUB_OUTPUT
+        echo "binary=${{ inputs.bin || inputs.crate }}" >> $GITHUB_OUTPUT
+        echo "first_path=${{ steps.cargo.outputs.dir }}/${{ inputs.bin || inputs.crate }}" >> $GITHUB_OUTPUT
+        echo "second_path=${{ runner.temp }}/${{ inputs.bin || inputs.crate }}.sig"
+
+    - name: Download ${{steps.vars.outputs.binary}}
+      run: |
+        if curl --output "${{ steps.vars.outputs.first_path }}" "${{ steps.vars.outputs.primary_url }}" --location --silent --show-error --fail --retry 5
+        then
+          echo "Fetching data from primary URL..."
+        else
+          echo "Primary URL request failed. Falling back to secondary URL..."
+          curl --output "${{ steps.vars.outputs.first_path }}" "${{ steps.vars.outputs.secondary_url }}" --location --silent --show-error --fail --retry 5
+        fi
       shell: bash
+
+    - name: Download ${{steps.vars.outputs.binary}}.sig
+      run: |
+        if curl --output "${{ steps.vars.outputs.second_path }}" "${{ steps.vars.outputs.primary_url }}.sig" --location --silent --show-error --fail --retry 5
+        then
+          echo "Fetching data from primary URL..."
+        else
+          echo "Primary URL request failed. Falling back to secondary URL..."
+        if curl --output "${{ steps.vars.outputs.second_path }}" "${{ steps.vars.outputs.secondary_url }}.sig" --location --silent --show-error --fail --retry 5
+        fi
+      shell: bash
+
     - name: Retrieve public key of signing key
-      run: gpg --output ${{runner.temp}}/signing-key.gpg --yes --dearmor ${{github.action_path}}/signing-key.asc
+      run: gpg --output ${{ runner.temp }}/signing-key.gpg --yes --dearmor ${{ github.action_path }}/signing-key.asc
       shell: bash
+
     - name: Verify gpg signature
-      run: gpg --no-default-keyring --keyring ${{runner.temp}}/signing-key.gpg --trusted-key 830334D6A6010C41 --verify ${{runner.temp}}/${{inputs.bin || inputs.crate}}.sig ${{steps.cargo.outputs.dir}}/${{inputs.bin || inputs.crate}}
+      run: gpg --no-default-keyring --keyring ${{ runner.temp }}/signing-key.gpg --trusted-key 830334D6A6010C41 --verify "${{ steps.vars.outputs.second_path }}" "${{ steps.vars.outputs.first_path }}"
       shell: bash
+
     - name: Set executable bit
-      run: chmod +x ${{steps.cargo.outputs.dir}}/${{inputs.bin || inputs.crate}}
+      run: chmod +x ${{ steps.cargo.outputs.dir }}/${{ steps.vars.outputs.binary }}
       shell: bash
