@@ -24,7 +24,7 @@ runs:
         echo "secondary_url=https://github.com/dtolnay/install/releases/download/${{ inputs.crate }}/${{ inputs.bin || inputs.crate }}" >> $GITHUB_OUTPUT
         echo "binary=${{ inputs.bin || inputs.crate }}" >> $GITHUB_OUTPUT
         echo "first_path=${{ steps.cargo.outputs.dir }}/${{ inputs.bin || inputs.crate }}" >> $GITHUB_OUTPUT
-        echo "second_path=${{ runner.temp }}/${{ inputs.bin || inputs.crate }}.sig"
+        echo "second_path=${{ runner.temp }}/${{ inputs.bin || inputs.crate }}.sig" >> $GITHUB_OUTPUT
 
     - name: Download ${{steps.vars.outputs.binary}}
       run: |
