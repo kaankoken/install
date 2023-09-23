@@ -1,0 +1,16 @@
+name: convco
+
+on:
+  push:
+    branches:
+      - convco
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      crate: convco
+    permissions:
+      contents: write
+    secrets: inherit
